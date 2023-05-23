@@ -28,7 +28,7 @@ func Example() {
 	tolower := func(r rune) rune {
 		return unicode.ToLower(r)
 	}
-	opts := &triebytesmapper.Options{RuneNormalizer: tolower}
+	opts := &triebytesmapper.Options{NormalizeRune: tolower}
 	m := triebytesmapper.New(opts, keywords...)
 
 	matches := m.Map(christmascarol)
@@ -66,7 +66,7 @@ func TestMapperMixedCase(t *testing.T) {
 	tolower := func(r rune) rune {
 		return unicode.ToLower(r)
 	}
-	opts := &triebytesmapper.Options{RuneNormalizer: tolower}
+	opts := &triebytesmapper.Options{NormalizeRune: tolower}
 	m := triebytesmapper.New(opts, "foo", "BAR", "baZ")
 	match, _ := m.MatchBytes([]byte("bAr"))
 	c.Assert(match, qt.Equals, "BAR")
@@ -88,7 +88,7 @@ func BenchmarkMap(b *testing.B) {
 		tolower := func(r rune) rune {
 			return unicode.ToLower(r)
 		}
-		opts := &triebytesmapper.Options{RuneNormalizer: tolower}
+		opts := &triebytesmapper.Options{NormalizeRune: tolower}
 		m := triebytesmapper.New(opts, keywords...)
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {

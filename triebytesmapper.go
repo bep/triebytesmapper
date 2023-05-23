@@ -11,7 +11,31 @@ type Mapper struct {
 	opts               *Options
 	keywordsOrig       []string
 	keywordsNormalized []string
-	root               *Node
+	root               *node
+}
+
+// New creates a new mapper with the given options and keywords.
+func New(opts *Options, keywords ...string) *Mapper {
+	if opts == nil {
+		opts = &Options{}
+	}
+
+	keywordsNormalized := keywords
+	if opts.NormalizeRune != nil {
+		keywordsNormalized = make([]string, len(keywords))
+		for i, k := range keywords {
+			keywordsNormalized[i] = strings.Map(opts.NormalizeRune, k)
+		}
+	}
+
+	m := &Mapper{
+		keywordsOrig:       keywords,
+		keywordsNormalized: keywordsNormalized,
+		opts:               opts,
+	}
+
+	m.root = m.build()
+	return m
 }
 
 // Keyword returns the keyword at the given index in the matches, nil if the index is out of range.
@@ -65,8 +89,8 @@ func (m *Mapper) MatchBytes(b []byte) (string, bool) {
 	r, w := rune(0), 0
 	for i := 0; i < len(b); i += w {
 		r, w = utf8.DecodeRune(b[i:])
-		if m.opts.RuneNormalizer != nil {
-			r = m.opts.RuneNormalizer(r)
+		if m.opts.NormalizeRune != nil {
+			r = m.opts.NormalizeRune(r)
 		}
 		if _, ok := node.Children[r]; !ok {
 			return "", false
@@ -76,6 +100,7 @@ func (m *Mapper) MatchBytes(b []byte) (string, bool) {
 	return node.Keyword, node.Keyword == ""
 }
 
+// LoHi is a low (inclusively) and high (exclusively) slice index.
 type LoHi struct {
 	Lo int
 	Hi int
@@ -83,51 +108,28 @@ type LoHi struct {
 
 // Options for the mapper.
 type Options struct {
-	// Will be applied to both the input and the keywords before matching.
+	// NormalizeRune will be applied to both the input and the keywords before matching.
 	// Defaults to nil.
 	// Typically used to  do lower casing and accent folding.
-	RuneNormalizer func(rune) rune
+	NormalizeRune func(rune) rune
 }
 
-func New(opts *Options, keywords ...string) *Mapper {
-	if opts == nil {
-		opts = &Options{}
-	}
-
-	keywordsNormalized := keywords
-	if opts.RuneNormalizer != nil {
-		keywordsNormalized = make([]string, len(keywords))
-		for i, k := range keywords {
-			keywordsNormalized[i] = strings.Map(opts.RuneNormalizer, k)
-		}
-	}
-
-	m := &Mapper{
-		keywordsOrig:       keywords,
-		keywordsNormalized: keywordsNormalized,
-		opts:               opts,
-	}
-
-	m.root = m.build()
-	return m
-}
-
-type Node struct {
-	Children map[rune]*Node
-	Keyword  string
-}
-
-func (m *Mapper) build() *Node {
-	root := &Node{Children: make(map[rune]*Node)}
+func (m *Mapper) build() *node {
+	root := &node{Children: make(map[rune]*node)}
 	for i, keyword := range m.keywordsNormalized {
-		node := root
+		n := root
 		for _, r := range keyword {
-			if _, ok := node.Children[r]; !ok {
-				node.Children[r] = &Node{Children: make(map[rune]*Node)}
+			if _, ok := n.Children[r]; !ok {
+				n.Children[r] = &node{Children: make(map[rune]*node)}
 			}
-			node = node.Children[r]
+			n = n.Children[r]
 		}
-		node.Keyword = m.keywordsOrig[i]
+		n.Keyword = m.keywordsOrig[i]
 	}
 	return root
+}
+
+type node struct {
+	Children map[rune]*node
+	Keyword  string
 }

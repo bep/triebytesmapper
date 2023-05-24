@@ -97,6 +97,7 @@ func isWordBoundary(r rune) bool {
 // The boolean return value indicates if there could be a match with
 // more bytes (b is a prefix of a keyword in the trie).
 func (m *Mapper) MatchBytes(b []byte) (string, bool) {
+
 	node := m.root
 	r, w := rune(0), 0
 	for i := 0; i < len(b); i += w {
@@ -104,10 +105,16 @@ func (m *Mapper) MatchBytes(b []byte) (string, bool) {
 		if m.opts.NormalizeRune != nil {
 			r = m.opts.NormalizeRune(r)
 		}
-		if _, ok := node.Children[r]; !ok {
+		if len(node.Children) <= 0 {
+			return "", false
+		}
+		if len(node.Children) <= int(r) {
 			return "", false
 		}
 		node = node.Children[r]
+		if node == nil {
+			return "", false
+		}
 	}
 	return node.Keyword, node.Keyword == ""
 }
@@ -127,21 +134,26 @@ type Options struct {
 }
 
 func (m *Mapper) build() *node {
-	root := &node{Children: make(map[rune]*node)}
+	root := &node{}
 	for i, keyword := range m.keywordsNormalized {
 		n := root
 		for _, r := range keyword {
-			if _, ok := n.Children[r]; !ok {
-				n.Children[r] = &node{Children: make(map[rune]*node)}
+			ri := int(r)
+			if len(n.Children) <= ri {
+				n.Children = append(n.Children, make([]*node, ri-len(n.Children)+1)...)
+			}
+			if n.Children[r] == nil {
+				n.Children[r] = &node{}
 			}
 			n = n.Children[r]
 		}
 		n.Keyword = m.keywordsOrig[i]
 	}
+
 	return root
 }
 
 type node struct {
-	Children map[rune]*node
+	Children []*node
 	Keyword  string
 }

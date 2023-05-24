@@ -43,7 +43,7 @@ func (m Matches) Keyword(i int, src []byte) []byte {
 	if i < 0 || i >= len(m) {
 		return nil
 	}
-	return src[m[i].Lo : m[i].Hi+1]
+	return src[m[i].Lo:m[i].Hi]
 }
 
 // Matches is a slice of low (inclusively) and high (exclusively) slice indices.
@@ -60,7 +60,7 @@ func (m *Mapper) Map(s []byte) Matches {
 			word := s[lo:i]
 			match, more := m.MatchBytes(word)
 			if match != "" {
-				matches = append(matches, LoHi{lo, i - 1})
+				matches = append(matches, LoHi{lo, i})
 			}
 			if !more {
 				// No more matches possible for this byte sequence.
@@ -74,7 +74,7 @@ func (m *Mapper) Map(s []byte) Matches {
 	word := s[lo:]
 	match, _ := m.MatchBytes(word)
 	if match != "" {
-		matches = append(matches, LoHi{lo, len(s) - 1})
+		matches = append(matches, LoHi{lo, len(s)})
 	}
 
 	return matches

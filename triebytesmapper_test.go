@@ -35,7 +35,7 @@ func Example() {
 	first := matches.Keyword(0, christmascarol)
 
 	fmt.Printf("Found %d matches. First match is %q.\n", len(matches), first)
-	//  Output: Found 8 matches. First match is "Dickens".
+	//  Output: Found 11 matches. First match is "Dickens".
 
 }
 
@@ -58,6 +58,22 @@ func TestMapper(t *testing.T) {
 	c.Assert(matches.Keyword(1, src), qt.DeepEquals, []byte("bar"))
 	c.Assert(matches.Keyword(2, src), qt.DeepEquals, []byte("baz"))
 	c.Assert(matches.Keyword(3, src), qt.IsNil)
+
+}
+
+func TestMapperMultiBytesUnicode(t *testing.T) {
+	c := qt.New(t)
+	m := triebytesmapper.New(nil, "👍", "👎")
+	c.Assert(m, qt.IsNotNil)
+	match, _ := m.MatchBytes([]byte("👍"))
+	c.Assert(match, qt.Equals, "👍")
+	match, _ = m.MatchBytes([]byte("👎"))
+	c.Assert(match, qt.Equals, "👎")
+
+	src := []byte("abc 👍 defg 👎.")
+	matches := m.Map(src)
+	c.Assert(matches, qt.HasLen, 2)
+	c.Assert(matches.Keyword(0, src), qt.DeepEquals, []byte("👍"))
 
 }
 
@@ -93,6 +109,16 @@ func BenchmarkMap(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_ = m.Map(content)
+		}
+	})
+
+	b.Run("Multibytes Unicode", func(b *testing.B) {
+		content := []byte(strings.Repeat("abc 👍 defg asdfasdfa asdfas asdfasdfasd a sdf 👎 ", 1000))
+		keywords := []string{"👍", "👎"}
+		m := triebytesmapper.New(nil, keywords...)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			m.Map(content)
 		}
 	})
 

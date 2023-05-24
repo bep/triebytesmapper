@@ -53,10 +53,17 @@ type Matches []LoHi
 func (m *Mapper) Map(s []byte) Matches {
 	matches := make(Matches, 0, 10)
 
+	wasWordBoundary := false
 	r, lo, w := rune(0), 0, 0
 	for i := 0; i < len(s); i += w {
 		r, w = utf8.DecodeRune(s[i:])
-		if unicode.IsSpace(r) {
+		if isWordBoundary(r) {
+			if wasWordBoundary {
+				// Skip consecutive word boundaries.
+				lo = i + w
+				continue
+			}
+			wasWordBoundary = true
 			word := s[lo:i]
 			match, more := m.MatchBytes(word)
 			if match != "" {
@@ -66,7 +73,8 @@ func (m *Mapper) Map(s []byte) Matches {
 				// No more matches possible for this byte sequence.
 				lo = i + w
 			}
-			continue
+		} else {
+			wasWordBoundary = false
 		}
 	}
 
@@ -78,6 +86,10 @@ func (m *Mapper) Map(s []byte) Matches {
 	}
 
 	return matches
+}
+
+func isWordBoundary(r rune) bool {
+	return unicode.IsSpace(r) || unicode.IsPunct(r)
 }
 
 // MatchBytes matches a byte slice against the keywords in the trie.
@@ -100,7 +112,7 @@ func (m *Mapper) MatchBytes(b []byte) (string, bool) {
 	return node.Keyword, node.Keyword == ""
 }
 
-// LoHi is a low (inclusively) and high (exclusively) slice index.
+// LoHi is a low (inclusively) and high (exclusively) slice indices.
 type LoHi struct {
 	Lo int
 	Hi int

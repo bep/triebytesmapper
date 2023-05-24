@@ -50,7 +50,7 @@ func TestMapper(t *testing.T) {
 	c.Assert(match, qt.Equals, "")
 	c.Assert(more, qt.IsTrue)
 
-	src := []byte("abc foo defg bar baz")
+	src := []byte("abc foo defg bar. baz")
 	matches := m.Map(src)
 	c.Assert(matches, qt.HasLen, 3)
 

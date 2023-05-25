@@ -3,6 +3,7 @@ package triebytesmapper_test
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"strings"
 	"testing"
@@ -89,38 +90,118 @@ func TestMapperMixedCase(t *testing.T) {
 }
 
 func BenchmarkMap(b *testing.B) {
-	content := []byte(strings.Repeat("abc foo defg asdfasdfa asdfas asdfasdfasd a sdf bar baz ", 1000))
-	keywords := []string{"foo", "bar", "baz"}
+	// https://poets.org/poem/do-not-go-gentle-good-night
+	// Translated to runes with https://valhyr.com/pages/rune-converter
+	// These runes should live in the 5792-5887 range of the unicode table.
+	const (
+		yeatsEnglish = `Do not go gentle into that good night, Old age should burn and rave at close of day; Rage, rage against the dying of the light. Though wise men at their end know dark is right, Because their words had forked no lightning they Do not go gentle into that good night.  Good men, the last wave by, crying how bright Their frail deeds might have danced in a green bay, Rage, rage against the dying of the light.  Wild men who caught and sang the sun in flight, And learn, too late, they grieved it on its way, Do not go gentle into that good night.  Grave men, near death, who see with blinding sight Blind eyes could blaze like meteors and be gay, Rage, rage against the dying of the light.  And you, my father, there on the sad height, Curse, bless, me now with your fierce tears, I pray. Do not go gentle into that good night. Rage, rage against the dying of the light.`
+		yeatsRunes   = `ᛞᛟ ᚾᛟᛏ ᚷᛟ ᚷᛖᚾᛏᛚᛖ ᛁᚾᛏᛟ ᚦᚨᛏ ᚷᛟᛟᛞ ᚾᛁᚷᚺᛏ, ᛟᛚᛞ ᚨᚷᛖ ᛊᚺᛟᚢᛚᛞ ᛒᚢᚱᚾ ᚨᚾᛞ ᚱᚨᚢᛖ ᚨᛏ ᚲᛚᛟᛊᛖ ᛟᚠ ᛞᚨᛁ; ᚱᚨᚷᛖ, ᚱᚨᚷᛖ ᚨᚷᚨᛁᚾᛊᛏ ᚦᛖ ᛞᛁᛁᛜ ᛟᚠ ᚦᛖ ᛚᛁᚷᚺᛏ. ᛏᚺᛟᚢᚷᚺ ᚹᛁᛊᛖ ᛗᛖᚾ ᚨᛏ ᚦᛖᛁᚱ ᛖᚾᛞ ᚲᚾᛟᚹ ᛞᚨᚱᚲ ᛁᛊ ᚱᛁᚷᚺᛏ, ᛒᛖᚲᚨᚢᛊᛖ ᚦᛖᛁᚱ ᚹᛟᚱᛞᛊ ᚺᚨᛞ ᚠᛟᚱᚲᛖᛞ ᚾᛟ ᛚᛁᚷᚺᛏᚾᛁᛜ ᚦᛖᛁ ᛞᛟ ᚾᛟᛏ ᚷᛟ ᚷᛖᚾᛏᛚᛖ ᛁᚾᛏᛟ ᚦᚨᛏ ᚷᛟᛟᛞ ᚾᛁᚷᚺᛏ. ᚷᛟᛟᛞ ᛗᛖᚾ, ᚦᛖ ᛚᚨᛊᛏ ᚹᚨᚢᛖ ᛒᛁ, ᚲᚱᛁᛁᛜ ᚺᛟᚹ ᛒᚱᛁᚷᚺᛏ ᛏᚺᛖᛁᚱ ᚠᚱᚨᛁᛚ ᛞᛖᛖᛞᛊ ᛗᛁᚷᚺᛏ ᚺᚨᚢᛖ ᛞᚨᚾᚲᛖᛞ ᛁᚾ ᚨ ᚷᚱᛖᛖᚾ ᛒᚨᛁ, ᚱᚨᚷᛖ, ᚱᚨᚷᛖ ᚨᚷᚨᛁᚾᛊᛏ ᚦᛖ ᛞᛁᛁᛜ ᛟᚠ ᚦᛖ ᛚᛁᚷᚺᛏ. ᚹᛁᛚᛞ ᛗᛖᚾ ᚹᚺᛟ ᚲᚨᚢᚷᚺᛏ ᚨᚾᛞ ᛊᚨᛜ ᚦᛖ ᛊᚢᚾ ᛁᚾ ᚠᛚᛁᚷᚺᛏ, ᚨᚾᛞ ᛚᛖᚱᚾ, ᛏᛟᛟ ᛚᚨᛏᛖ, ᚦᛖᛁ ᚷᚱᛁᛖᚢᛖᛞ ᛁᛏ ᛟᚾ ᛁᛏᛊ ᚹᚨᛁ, ᛞᛟ ᚾᛟᛏ ᚷᛟ ᚷᛖᚾᛏᛚᛖ ᛁᚾᛏᛟ ᚦᚨᛏ ᚷᛟᛟᛞ ᚾᛁᚷᚺᛏ. ᚷᚱᚨᚢᛖ ᛗᛖᚾ, ᚾᛖᚱ ᛞᛖᚦ, ᚹᚺᛟ ᛊᛖᛖ ᚹᛁᚦ ᛒᛚᛁᚾᛞᛁᛜ ᛊᛁᚷᚺᛏ ᛒᛚᛁᚾᛞ ᛖᛁᛖᛊ ᚲᛟᚢᛚᛞ ᛒᛚᚨᛉᛖ ᛚᛁᚲᛖ ᛗᛖᛏᛖᛟᚱᛊ ᚨᚾᛞ ᛒᛖ ᚷᚨᛁ, ᚱᚨᚷᛖ, ᚱᚨᚷᛖ ᚨᚷᚨᛁᚾᛊᛏ ᚦᛖ ᛞᛁᛁᛜ ᛟᚠ ᚦᛖ ᛚᛁᚷᚺᛏ. ᚨᚾᛞ ᛁᛟᚢ, ᛗᛁ ᚠᚨᚦᛖᚱ, ᚦᛖᚱᛖ ᛟᚾ ᚦᛖ ᛊᚨᛞ ᚺᛖᛁᚷᚺᛏ, ᚲᚢᚱᛊᛖ, ᛒᛚᛖᛊᛊ, ᛗᛖ ᚾᛟᚹ ᚹᛁᚦ ᛁᛟᚢᚱ ᚠᛁᛖᚱᚲᛖ ᛏᛖᚱᛊ, ᛁ ᛈᚱᚨᛁ. ᛞᛟ ᚾᛟᛏ ᚷᛟ ᚷᛖᚾᛏᛚᛖ ᛁᚾᛏᛟ ᚦᚨᛏ ᚷᛟᛟᛞ ᚾᛁᚷᚺᛏ. ᚱᚨᚷᛖ, ᚱᚨᚷᛖ ᚨᚷᚨᛁᚾᛊᛏ ᚦᛖ ᛞᛁᛁᛜ ᛟᚠ ᚦᛖ ᛚᛁᚷᚺᛏ.`
+	)
 
-	b.Run("No options", func(b *testing.B) {
-		m := triebytesmapper.New(nil, keywords...)
+	createYeatsContentAndKeywords := func(sampleText string, lenContent, numKeywords int) ([]byte, []string) {
+		content := sampleText
+		for len(content) < lenContent {
+			content = content + " " + sampleText
+		}
+		content = content[:lenContent]
+		sampleTextWords := strings.Fields(string(sampleText))
+
+		// To avoid getting a perfect match we insert some random words into the keywords.
+		numDummyWOrds := numKeywords / 10
+		for i := 0; i < numDummyWOrds; i++ {
+			sampleTextWords = append(sampleTextWords, fmt.Sprintf("dummy%d", i))
+		}
+
+		// Shuffle the words.
+		for i := range sampleTextWords {
+			j := rand.Intn(i + 1)
+			sampleTextWords[i], sampleTextWords[j] = sampleTextWords[j], sampleTextWords[i]
+		}
+		keywords := make([]string, numKeywords)
+		for i := 0; i < numKeywords; i++ {
+			keywords[i] = sampleTextWords[i%len(sampleTextWords)]
+		}
+		return []byte(string(content)), keywords
+	}
+
+	var basicContent, basicKeywords = createYeatsContentAndKeywords(yeatsEnglish, 1000, 30)
+
+	b.Run("New", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			m.Map(content)
+			m := triebytesmapper.New(nil, basicKeywords...)
+			if m == nil {
+				b.Fatal("m is nil")
+			}
 		}
 	})
 
-	b.Run("To lowercase", func(b *testing.B) {
+	b.Run("New tolower", func(b *testing.B) {
 		tolower := func(r rune) rune {
 			return unicode.ToLower(r)
 		}
 		opts := &triebytesmapper.Options{NormalizeRune: tolower}
-		m := triebytesmapper.New(opts, keywords...)
+
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_ = m.Map(content)
+			m := triebytesmapper.New(opts, basicKeywords...)
+			if m == nil {
+				b.Fatal("m is nil")
+			}
 		}
 	})
 
-	b.Run("Multibytes Unicode", func(b *testing.B) {
-		content := []byte(strings.Repeat("abc 👍 defg asdfasdfa asdfas asdfasdfasd a sdf 👎 ", 1000))
-		keywords := []string{"👍", "👎"}
-		m := triebytesmapper.New(nil, keywords...)
+	b.Run("Map", func(b *testing.B) {
+		m := triebytesmapper.New(nil, basicKeywords...)
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			m.Map(content)
+			_ = m.Map(basicContent)
 		}
 	})
+
+	b.Run("Map tolower", func(b *testing.B) {
+		tolower := func(r rune) rune {
+			return unicode.ToLower(r)
+		}
+		opts := &triebytesmapper.Options{NormalizeRune: tolower}
+		m := triebytesmapper.New(opts, basicKeywords...)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = m.Map(basicContent)
+		}
+	})
+
+	for _, methodToTest := range []string{"Map", "New"} {
+
+		for _, lang := range []string{"English", "Runes"} {
+			sampleText := yeatsEnglish
+			if lang == "Runes" {
+				sampleText = yeatsRunes
+			}
+			for _, contentLength := range []int{1000, 10000, 100000} {
+				for _, numKeywords := range []int{10, 100, 1000} {
+					content, keywords := createYeatsContentAndKeywords(sampleText, contentLength, numKeywords)
+					b.Run(fmt.Sprintf("%s %s Yeats %d words %d keywords", methodToTest, lang, contentLength, numKeywords), func(b *testing.B) {
+						if methodToTest == "Map" {
+							m := triebytesmapper.New(nil, keywords...)
+							b.ResetTimer()
+							for i := 0; i < b.N; i++ {
+								m.Map(content)
+							}
+						} else {
+							for i := 0; i < b.N; i++ {
+								m := triebytesmapper.New(nil, keywords...)
+								if m == nil {
+									b.Fatal("m is nil")
+								}
+							}
+						}
+
+					})
+				}
+			}
+		}
+	}
 
 }
 

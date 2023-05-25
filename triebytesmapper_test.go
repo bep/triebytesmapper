@@ -172,14 +172,13 @@ func BenchmarkMap(b *testing.B) {
 	})
 
 	for _, methodToTest := range []string{"Map", "New"} {
-
 		for _, lang := range []string{"English", "Runes"} {
 			sampleText := yeatsEnglish
 			if lang == "Runes" {
 				sampleText = yeatsRunes
 			}
-			for _, contentLength := range []int{1000, 10000, 100000} {
-				for _, numKeywords := range []int{10, 100, 1000} {
+			for _, contentLength := range []int{1000, 10000} {
+				for _, numKeywords := range []int{10, 100} {
 					content, keywords := createYeatsContentAndKeywords(sampleText, contentLength, numKeywords)
 					b.Run(fmt.Sprintf("%s %s Yeats %d words %d keywords", methodToTest, lang, contentLength, numKeywords), func(b *testing.B) {
 						if methodToTest == "Map" {

@@ -25,7 +25,13 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// The thousandwords file is a list of words separated by newlines.
+	// We need to split it into a slice of strings.
 	keywords := strings.Split(string(thousandwords), "\n")
+	// Trim any Windows line endings.
+	for i, k := range keywords {
+		keywords[i] = strings.TrimSpace(k)
+	}
 	tolower := func(r rune) rune {
 		return unicode.ToLower(r)
 	}
@@ -59,7 +65,6 @@ func TestMapper(t *testing.T) {
 	c.Assert(matches.Keyword(1, src), qt.DeepEquals, []byte("bar"))
 	c.Assert(matches.Keyword(2, src), qt.DeepEquals, []byte("baz"))
 	c.Assert(matches.Keyword(3, src), qt.IsNil)
-
 }
 
 func TestMapperMultiBytesUnicode(t *testing.T) {

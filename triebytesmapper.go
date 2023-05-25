@@ -28,6 +28,10 @@ func New(opts *Options, keywords ...string) *Mapper {
 		}
 	}
 
+	if opts.IsWordBoundary == nil {
+		opts.IsWordBoundary = isWordBoundary
+	}
+
 	m := &Mapper{
 		keywordsOrig:       keywords,
 		keywordsNormalized: keywordsNormalized,
@@ -57,7 +61,7 @@ func (m *Mapper) Map(s []byte) Matches {
 	r, lo, w := rune(0), 0, 0
 	for i := 0; i < len(s); i += w {
 		r, w = utf8.DecodeRune(s[i:])
-		if isWordBoundary(r) {
+		if m.opts.IsWordBoundary(r) {
 			if wasWordBoundary {
 				// Skip consecutive word boundaries.
 				lo = i + w
@@ -124,6 +128,10 @@ type Options struct {
 	// Defaults to nil.
 	// Typically used to  do lower casing and accent folding.
 	NormalizeRune func(rune) rune
+
+	// IsWordBoundary is used to determine word boundaries.
+	// A default implementation is used if nil.
+	IsWordBoundary func(rune) bool
 }
 
 func (m *Mapper) build() *node {

@@ -113,7 +113,7 @@ func BenchmarkMap(b *testing.B) {
 
 		// To avoid getting a perfect match we insert some random words into the keywords.
 		numDummyWOrds := numKeywords / 10
-		for i := 0; i < numDummyWOrds; i++ {
+		for i := range numDummyWOrds {
 			sampleTextWords = append(sampleTextWords, fmt.Sprintf("dummy%d", i))
 		}
 
@@ -123,7 +123,7 @@ func BenchmarkMap(b *testing.B) {
 			sampleTextWords[i], sampleTextWords[j] = sampleTextWords[j], sampleTextWords[i]
 		}
 		keywords := make([]string, numKeywords)
-		for i := 0; i < numKeywords; i++ {
+		for i := range numKeywords {
 			keywords[i] = sampleTextWords[i%len(sampleTextWords)]
 		}
 		return []byte(string(content)), keywords
